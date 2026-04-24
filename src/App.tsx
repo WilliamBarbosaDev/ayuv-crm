@@ -29,7 +29,8 @@ function App() {
   const fetchLeads = async () => {
     try {
       setLoading(true);
-      const res = await fetch('http://localhost:3001/api/leads', {
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+      const res = await fetch(`${API_URL}/api/leads`, {
         headers: { 'x-api-key': 'MINHA_CHAVE_SECRETA' }
       });
       const data = await res.json();
@@ -66,7 +67,8 @@ function App() {
     ));
 
     try {
-      const res = await fetch(`http://localhost:3001/api/leads/${draggedLeadId}`, {
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+      const res = await fetch(`${API_URL}/api/leads/${draggedLeadId}`, {
         method: 'PUT',
         headers: { 
           'Content-Type': 'application/json',

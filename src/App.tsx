@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { RefreshCcw, Leaf, X, Clock } from 'lucide-react';
+import { supabase } from './supabase';
 import './index.css';
 
 interface Lead {
@@ -29,12 +30,13 @@ function App() {
   const fetchLeads = async () => {
     try {
       setLoading(true);
-      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-      const res = await fetch(`${API_URL}/api/leads`, {
-        headers: { 'x-api-key': 'MINHA_CHAVE_SECRETA' }
-      });
-      const data = await res.json();
-      setLeads(data);
+      const { data, error } = await supabase
+        .from('leads')
+        .select('*')
+        .order('updated_at', { ascending: false });
+        
+      if (error) throw error;
+      setLeads(data || []);
     } catch (err) {
       console.error("Error fetching leads:", err);
     } finally {
@@ -44,6 +46,27 @@ function App() {
 
   useEffect(() => {
     fetchLeads();
+
+    // Subscribe to real-time changes
+    const channel = supabase
+      .channel('schema-db-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'leads'
+        },
+        (payload) => {
+          console.log('Realtime update received!', payload);
+          fetchLeads(); // Fetch all leads again to ensure correct ordering, or update state manually.
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const handleDragStart = (e: React.DragEvent, id: string) => {
@@ -63,22 +86,16 @@ function App() {
     // Optimistic update
     const previousLeads = [...leads];
     setLeads(leads.map(lead => 
-      lead.id === draggedLeadId ? { ...lead, status: statusId } : lead
+      lead.id === draggedLeadId ? { ...lead, status: statusId, updated_at: new Date().toISOString() } : lead
     ));
 
     try {
-      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-      const res = await fetch(`${API_URL}/api/leads/${draggedLeadId}`, {
-        method: 'PUT',
-        headers: { 
-          'Content-Type': 'application/json',
-          'x-api-key': 'MINHA_CHAVE_SECRETA'
-        },
-        body: JSON.stringify({ status: statusId })
-      });
-      if (!res.ok) {
-        throw new Error('Failed to update status');
-      }
+      const { error } = await supabase
+        .from('leads')
+        .update({ status: statusId, updated_at: new Date().toISOString() })
+        .eq('id', draggedLeadId);
+
+      if (error) throw error;
     } catch (err) {
       console.error(err);
       // Revert on error

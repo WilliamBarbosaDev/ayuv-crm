@@ -22,12 +22,34 @@ const STATUSES = [
 ];
 
 function App() {
+  const [session, setSession] = useState<any>(null);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [authError, setAuthError] = useState('');
+  
   const [leads, setLeads] = useState<Lead[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [draggedLeadId, setDraggedLeadId] = useState<string | null>(null);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
 
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setAuthLoading(false);
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
   const fetchLeads = async () => {
+    if (!session) return;
     try {
       setLoading(true);
       const { data, error } = await supabase
@@ -45,6 +67,8 @@ function App() {
   };
 
   useEffect(() => {
+    if (!session) return;
+    
     fetchLeads();
 
     // Subscribe to real-time changes
@@ -59,7 +83,7 @@ function App() {
         },
         (payload) => {
           console.log('Realtime update received!', payload);
-          fetchLeads(); // Fetch all leads again to ensure correct ordering, or update state manually.
+          fetchLeads();
         }
       )
       .subscribe();
@@ -67,7 +91,23 @@ function App() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [session]);
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthLoading(true);
+    setAuthError('');
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+    if (error) setAuthError('E-mail ou senha incorretos.');
+    setAuthLoading(false);
+  };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+  };
 
   const handleDragStart = (e: React.DragEvent, id: string) => {
     setDraggedLeadId(id);
@@ -83,7 +123,6 @@ function App() {
     e.preventDefault();
     if (!draggedLeadId) return;
 
-    // Optimistic update
     const previousLeads = [...leads];
     setLeads(leads.map(lead => 
       lead.id === draggedLeadId ? { ...lead, status: statusId, updated_at: new Date().toISOString() } : lead
@@ -98,8 +137,8 @@ function App() {
       if (error) throw error;
     } catch (err) {
       console.error(err);
-      // Revert on error
       setLeads(previousLeads);
+      alert("Erro ao atualizar lead. Verifique se o RLS está configurado corretamente no Supabase para usuários autenticados.");
     }
     
     setDraggedLeadId(null);
@@ -112,6 +151,54 @@ function App() {
     }).format(d);
   };
 
+  if (authLoading) {
+    return <div className="app-container" style={{ justifyContent: 'center', alignItems: 'center' }}>Carregando...</div>;
+  }
+
+  if (!session) {
+    return (
+      <div className="login-container">
+        <div className="login-card">
+          <div className="logo-icon" style={{ margin: '0 auto 1.5rem auto', width: '50px', height: '50px' }}>
+            <Leaf size={28} />
+          </div>
+          <h2>Acesso ao Ayuv CRM</h2>
+          <p className="login-subtitle">Entre com suas credenciais para gerenciar seus leads.</p>
+          
+          <form onSubmit={handleLogin}>
+            {authError && <div className="auth-error">{authError}</div>}
+            
+            <div className="form-group">
+              <label>E-mail</label>
+              <input 
+                type="email" 
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="seu@email.com"
+                required
+              />
+            </div>
+            
+            <div className="form-group">
+              <label>Senha</label>
+              <input 
+                type="password" 
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Sua senha secreta"
+                required
+              />
+            </div>
+            
+            <button type="submit" className="btn btn-block" disabled={authLoading}>
+              {authLoading ? 'Entrando...' : 'Entrar no CRM'}
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="app-container">
       <header>
@@ -121,10 +208,15 @@ function App() {
           </div>
           <h1>Ayuv CRM</h1>
         </div>
-        <button className="btn" onClick={fetchLeads}>
-          <RefreshCcw size={18} className={loading ? "animate-spin" : ""} />
-          {loading ? 'Atualizando...' : 'Atualizar'}
-        </button>
+        <div style={{ display: 'flex', gap: '1rem' }}>
+          <button className="btn" onClick={fetchLeads}>
+            <RefreshCcw size={18} className={loading ? "animate-spin" : ""} />
+            {loading ? 'Atualizando...' : 'Atualizar'}
+          </button>
+          <button className="btn btn-outline" onClick={handleLogout}>
+            Sair
+          </button>
+        </div>
       </header>
 
       <div className="kanban-board">

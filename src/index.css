@@ -434,3 +434,100 @@ header h1 {
 .animate-spin {
   animation: spin 1s linear infinite;
 }
+
+/* Login Styles */
+.login-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  padding: 2rem;
+}
+
+.login-card {
+  background: var(--card-bg);
+  padding: 3rem 2.5rem;
+  border-radius: 24px;
+  width: 100%;
+  max-width: 440px;
+  box-shadow: var(--shadow-modal);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  text-align: center;
+}
+
+.login-card h2 {
+  margin: 0 0 0.5rem 0;
+  color: var(--wood-900);
+  font-size: 1.5rem;
+  letter-spacing: -0.02em;
+}
+
+.login-subtitle {
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  margin-bottom: 2rem;
+}
+
+.form-group {
+  text-align: left;
+  margin-bottom: 1.5rem;
+}
+
+.form-group label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--wood-700);
+  margin-bottom: 0.5rem;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 0.8rem 1rem;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  font-family: inherit;
+  font-size: 0.95rem;
+  background-color: var(--bg-color);
+  transition: all 0.2s ease;
+  color: var(--wood-900);
+}
+
+.form-group input:focus {
+  outline: none;
+  border-color: var(--wood-400);
+  box-shadow: 0 0 0 3px rgba(73, 140, 97, 0.1);
+  background-color: #fff;
+}
+
+.btn-block {
+  width: 100%;
+  justify-content: center;
+  padding: 0.8rem;
+  margin-top: 0.5rem;
+}
+
+.btn-outline {
+  background: transparent;
+  color: var(--wood-700);
+  border: 1px solid var(--border-color);
+  box-shadow: none;
+}
+
+.btn-outline:hover {
+  background: var(--wood-50);
+  color: var(--wood-800);
+  border-color: var(--wood-300);
+  box-shadow: none;
+}
+
+.auth-error {
+  background-color: #fee2e2;
+  color: #b91c1c;
+  padding: 0.75rem;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  border: 1px solid #fca5a5;
+}

@@ -69,23 +69,42 @@ app.get('/api/leads', async (req, res) => {
   }
 });
 
-// POST /api/leads - Create new lead
+// POST /api/leads - Create new lead from n8n webhook
 app.post('/api/leads', async (req, res) => {
   try {
-    const { phone, name, status = 'novo_lead', last_message = '', remoteJid = '', source = 'whatsapp' } = req.body;
+    // Recebe phone, name e message (conforme n8n)
+    const { phone, name, message, status = 'novo_lead', remoteJid = '', source = 'whatsapp' } = req.body;
     
+    // Mapeia message para last_message (se message não for passado, tenta pegar last_message)
+    const last_message = message || req.body.last_message || '';
+
     if (!phone) {
-      return res.status(400).json({ error: 'Phone is required' });
+      return res.status(400).json({ error: 'O campo "phone" é obrigatório' });
     }
 
     const existingLead = await db.get('SELECT * FROM leads WHERE phone = ?', phone);
+    
+    const updated_at = new Date().toISOString();
+
     if (existingLead) {
-      return res.status(200).json(existingLead); // return existing lead if duplicate phone
+      // Se o lead existir, atualiza (Upsert)
+      const updatedName = name || existingLead.name;
+      const updatedMessage = last_message || existingLead.last_message;
+      
+      await db.run(
+        `UPDATE leads 
+         SET name = ?, last_message = ?, updated_at = ? 
+         WHERE phone = ?`,
+        [updatedName, updatedMessage, updated_at, phone]
+      );
+      
+      const lead = await db.get('SELECT * FROM leads WHERE phone = ?', phone);
+      return res.status(200).json({ success: true, data: lead });
     }
 
+    // Se o lead não existir, insere
     const id = uuidv4();
-    const created_at = new Date().toISOString();
-    const updated_at = created_at;
+    const created_at = updated_at;
 
     await db.run(
       `INSERT INTO leads (id, phone, name, status, last_message, remoteJid, source, created_at, updated_at) 
@@ -94,9 +113,10 @@ app.post('/api/leads', async (req, res) => {
     );
 
     const lead = await db.get('SELECT * FROM leads WHERE id = ?', id);
-    res.status(201).json(lead);
+    res.status(201).json({ success: true, data: lead });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('Erro na API /api/leads:', err);
+    res.status(500).json({ success: false, error: err.message });
   }
 });
 

@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { RefreshCcw, Leaf, X, Clock } from 'lucide-react';
 import { supabase } from './supabase';
 import './index.css';
+// v1.0.1 - Authentication and Logout fix
+
 
 interface Lead {
   id: string;

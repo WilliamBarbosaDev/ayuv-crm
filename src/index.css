@@ -365,11 +365,14 @@ body {
 }
 
 .mini-btn.wa {
-  color: #128c7e;
+  background-color: #25d366;
+  color: white;
+  border-color: #128c7e;
 }
 .mini-btn.wa:hover {
-  background-color: #f0fdf4;
-  border-color: #128c7e;
+  background-color: #128c7e;
+  border-color: #075e54;
+  box-shadow: 0 4px 12px rgba(37, 211, 102, 0.2);
 }
 
 .mini-btn.sc {

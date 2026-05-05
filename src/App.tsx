@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react';
 import { 
   RefreshCcw, Leaf, X, MessageCircle, Calendar, 
-  Search, LayoutDashboard, Users, Settings, LogOut, 
-  Filter, UserPlus, AlertCircle, TrendingUp, CalendarDays
+  Search, LayoutDashboard, Users, LogOut, 
+  UserPlus, TrendingUp, CalendarDays,
+  Plus, Trash2, Phone, User as UserIcon
 } from 'lucide-react';
 import { supabase } from './supabase';
 import './index.css';
 
-// v1.3.0 - Multi-Module CRM (Dashboard, Kanban, Appointments, Users)
+// v1.3.1 - Fully Functional Features (Manual Creation, Search, Real-time Dashboard)
 interface Lead {
   id: string;
   phone: string;
@@ -28,7 +29,7 @@ const STATUSES = [
 ];
 
 function App() {
-  const [activeTab, setActiveTab] = useState('kanban'); // dashboard, kanban, appointments, users
+  const [activeTab, setActiveTab] = useState('kanban');
   const [session, setSession] = useState<any>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [email, setEmail] = useState('');
@@ -42,6 +43,10 @@ function App() {
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [schedulingLead, setSchedulingLead] = useState<Lead | null>(null);
   const [scheduleDate, setScheduleDate] = useState('');
+  
+  // New Lead State
+  const [showNewLeadModal, setShowNewLeadModal] = useState(false);
+  const [newLeadData, setNewLeadData] = useState({ name: '', phone: '', status: 'novo_lead', last_message: '' });
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -105,13 +110,67 @@ function App() {
       if (error) throw error;
     } catch (err) {
       setLeads(previousLeads);
-      alert("Erro ao atualizar status.");
+    }
+  };
+
+  const handleCreateLead = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      setLoading(true);
+      const { error } = await supabase
+        .from('leads')
+        .insert([{
+          ...newLeadData,
+          updated_at: new Date().toISOString()
+        }]);
+      
+      if (error) throw error;
+      
+      setShowNewLeadModal(false);
+      setNewLeadData({ name: '', phone: '', status: 'novo_lead', last_message: '' });
+      fetchLeads();
+    } catch (err) {
+      alert("Erro ao criar lead. Verifique se o telefone é único.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteLead = async (id: string) => {
+    if (!confirm("Tem certeza que deseja excluir este lead?")) return;
+    try {
+      const { error } = await supabase.from('leads').delete().eq('id', id);
+      if (error) throw error;
+      fetchLeads();
+      setSelectedLead(null);
+    } catch (err) {
+      alert("Erro ao excluir lead.");
+    }
+  };
+
+  const handleSchedule = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!schedulingLead || !scheduleDate) return;
+    try {
+      const { error } = await supabase
+        .from('leads')
+        .update({ 
+          scheduled_at: new Date(scheduleDate).toISOString(),
+          updated_at: new Date().toISOString() 
+        })
+        .eq('id', schedulingLead.id);
+      if (error) throw error;
+      setSchedulingLead(null);
+      setScheduleDate('');
+      fetchLeads();
+    } catch (err) {
+      alert("Erro ao agendar.");
     }
   };
 
   const handleWhatsApp = (phone: string, name: string) => {
     const cleanPhone = phone.replace(/\D/g, '');
-    const message = encodeURIComponent(`Olá ${name}, tudo bem? Estou entrando em contato para darmos continuidade ao seu atendimento.`);
+    const message = encodeURIComponent(`Olá ${name}, tudo bem? Vi seu interesse e gostaria de conversar.`);
     window.open(`https://wa.me/${cleanPhone}?text=${message}`, '_blank');
   };
 
@@ -177,32 +236,17 @@ function App() {
         </div>
         
         <nav className="nav-links">
-          <div 
-            className={`nav-item ${activeTab === 'dashboard' ? 'active' : ''}`}
-            onClick={() => setActiveTab('dashboard')}
-          >
+          <div className={`nav-item ${activeTab === 'dashboard' ? 'active' : ''}`} onClick={() => setActiveTab('dashboard')}>
             <LayoutDashboard size={18} /> Dashboards
           </div>
-          <div 
-            className={`nav-item ${activeTab === 'kanban' ? 'active' : ''}`}
-            onClick={() => setActiveTab('kanban')}
-          >
+          <div className={`nav-item ${activeTab === 'kanban' ? 'active' : ''}`} onClick={() => setActiveTab('kanban')}>
             <TrendingUp size={18} /> Funil de Vendas
           </div>
-          <div 
-            className={`nav-item ${activeTab === 'appointments' ? 'active' : ''}`}
-            onClick={() => setActiveTab('appointments')}
-          >
+          <div className={`nav-item ${activeTab === 'appointments' ? 'active' : ''}`} onClick={() => setActiveTab('appointments')}>
             <CalendarDays size={18} /> Agendamentos
           </div>
-          <div 
-            className={`nav-item ${activeTab === 'users' ? 'active' : ''}`}
-            onClick={() => setActiveTab('users')}
-          >
+          <div className={`nav-item ${activeTab === 'users' ? 'active' : ''}`} onClick={() => setActiveTab('users')}>
             <Users size={18} /> Time / Usuários
-          </div>
-          <div className="nav-item" onClick={() => setActiveTab('settings')}>
-            <Settings size={18} /> Configurações
           </div>
         </nav>
 
@@ -232,11 +276,11 @@ function App() {
           </div>
           
           <div className="header-actions">
-            <button className="btn-secondary" onClick={fetchLeads}>
+            <button className="btn-secondary" onClick={fetchLeads} title="Atualizar dados">
               <RefreshCcw size={16} className={loading ? 'spin' : ''} />
             </button>
-            <button className="btn-primary" onClick={() => setActiveTab('kanban')}>
-              Novo Lead Manual
+            <button className="btn-primary" onClick={() => setShowNewLeadModal(true)}>
+              <Plus size={18} /> Novo Lead
             </button>
           </div>
         </header>
@@ -248,17 +292,14 @@ function App() {
               <div className="metric-card">
                 <span className="metric-label">Conversão Finalizada</span>
                 <span className="metric-value">{stats.concluded}</span>
-                <div style={{ fontSize: '0.7rem', color: 'var(--brand-primary)' }}>+12% este mês</div>
               </div>
               <div className="metric-card">
                 <span className="metric-label">Em Atendimento</span>
                 <span className="metric-value">{stats.inProgress}</span>
-                <div style={{ fontSize: '0.7rem', color: 'var(--status-atendimento)' }}>{Math.round((stats.inProgress/stats.total)*100)}% do volume</div>
               </div>
               <div className="metric-card">
-                <span className="metric-label">Pendentes / Novos</span>
+                <span className="metric-label">Novos Leads</span>
                 <span className="metric-value">{stats.new}</span>
-                <div style={{ fontSize: '0.7rem', color: 'var(--status-novo)' }}>Aguardando ação</div>
               </div>
             </div>
 
@@ -271,21 +312,21 @@ function App() {
                     const height = stats.total > 0 ? (count / stats.total) * 100 : 0;
                     return (
                       <div key={s.id} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
-                        <div style={{ width: '100%', height: `${height}%`, minHeight: '4px', background: s.color, borderRadius: '4px 4px 0 0' }}></div>
+                        <div style={{ width: '100%', height: `${height}%`, minHeight: '4px', background: s.color, borderRadius: '4px 4px 0 0', transition: 'height 1s ease' }}></div>
                         <span style={{ fontSize: '0.6rem', fontWeight: 600, textAlign: 'center' }}>{s.label}</span>
                       </div>
                     );
                   })}
                 </div>
               </div>
-              <div className="metric-card" style={{ display: 'flex', flexDirection: 'column' }}>
+              <div className="metric-card">
                 <span className="metric-label">Atividades Recentes</span>
                 <div style={{ marginTop: '1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                  {leads.slice(0, 5).map(l => (
+                  {leads.slice(0, 8).map(l => (
                     <div key={l.id} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '0.85rem' }}>
                       <div style={{ width: 8, height: 8, borderRadius: '50%', background: STATUSES.find(s => s.id === l.status)?.color }}></div>
                       <span style={{ fontWeight: 600 }}>{l.name || 'Sem Nome'}</span>
-                      <span style={{ color: 'var(--text-muted)' }}>entrou em {STATUSES.find(s => s.id === l.status)?.label}</span>
+                      <span style={{ color: 'var(--text-muted)' }}>em {STATUSES.find(s => s.id === l.status)?.label}</span>
                     </div>
                   ))}
                 </div>
@@ -295,79 +336,61 @@ function App() {
         )}
 
         {activeTab === 'kanban' && (
-          <>
-            <section className="metrics-row">
-              <div className="metric-card">
-                <span className="metric-label">Agendados Hoje</span>
-                <span className="metric-value">{stats.today}</span>
-              </div>
-              <div className="metric-card">
-                <span className="metric-label">Total no Funil</span>
-                <span className="metric-value">{stats.total}</span>
-              </div>
-            </section>
-            <div className="board-wrapper">
-              {STATUSES.map(status => {
-                const columnLeads = filteredLeads.filter(l => l.status === status.id);
-                return (
-                  <div key={status.id} className="column" onDragOver={e => e.preventDefault()} onDrop={e => {
-                    e.preventDefault();
-                    if (draggedLeadId) handleDrop(draggedLeadId, status.id);
-                  }}>
-                    <div className="column-header">
-                      <div className="column-title">
-                        <div className="column-dot" style={{ backgroundColor: status.color }}></div>
-                        {status.label}
-                      </div>
-                      <span className="count-badge">{columnLeads.length}</span>
+          <div className="board-wrapper">
+            {STATUSES.map(status => {
+              const columnLeads = filteredLeads.filter(l => l.status === status.id);
+              return (
+                <div key={status.id} className="column" onDragOver={e => e.preventDefault()} onDrop={e => {
+                  e.preventDefault();
+                  if (draggedLeadId) handleDrop(draggedLeadId, status.id);
+                }}>
+                  <div className="column-header">
+                    <div className="column-title">
+                      <div className="column-dot" style={{ backgroundColor: status.color }}></div>
+                      {status.label}
                     </div>
-                    <div className="cards-container">
-                      {columnLeads.map(lead => (
-                        <div key={lead.id} className="lead-card" draggable onDragStart={() => setDraggedLeadId(lead.id)} onClick={() => setSelectedLead(lead)}>
-                          <div className="card-top">
-                            <span className="lead-name">{lead.name || 'Sem Nome'}</span>
-                            <span className="lead-phone">{lead.phone}</span>
-                          </div>
-                          <p className="lead-msg">{lead.last_message || 'Lead pendente de contato...'}</p>
-                          {lead.scheduled_at && (
-                            <div className="lead-schedule">
-                              <Calendar size={12} /> {formatDate(lead.scheduled_at)}
-                            </div>
-                          )}
-                          <div className="card-actions-row" onClick={e => e.stopPropagation()}>
-                            <button className="mini-btn wa" onClick={() => handleWhatsApp(lead.phone, lead.name)}>
-                              <MessageCircle size={14} /> WhatsApp
-                            </button>
-                            <button className="mini-btn sc" onClick={() => setSchedulingLead(lead)}>
-                              <Calendar size={14} /> Agendar
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+                    <span className="count-badge">{columnLeads.length}</span>
                   </div>
-                );
-              })}
-            </div>
-          </>
+                  <div className="cards-container">
+                    {columnLeads.map(lead => (
+                      <div key={lead.id} className="lead-card" draggable onDragStart={() => setDraggedLeadId(lead.id)} onClick={() => setSelectedLead(lead)}>
+                        <div className="card-top">
+                          <span className="lead-name">{lead.name || 'Sem Nome'}</span>
+                          <span className="lead-phone">{lead.phone}</span>
+                        </div>
+                        <p className="lead-msg">{lead.last_message || 'Aguardando contato...'}</p>
+                        {lead.scheduled_at && (
+                          <div className="lead-schedule">
+                            <Calendar size={12} /> {formatDate(lead.scheduled_at)}
+                          </div>
+                        )}
+                        <div className="card-actions-row" onClick={e => e.stopPropagation()}>
+                          <button className="mini-btn wa" onClick={() => handleWhatsApp(lead.phone, lead.name)}>
+                            <MessageCircle size={14} /> WhatsApp
+                          </button>
+                          <button className="mini-btn sc" onClick={() => setSchedulingLead(lead)}>
+                            <Calendar size={14} /> Agendar
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         )}
 
         {activeTab === 'appointments' && (
           <div style={{ padding: '2rem', overflowY: 'auto' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-              <h2 style={{ fontFamily: 'var(--font-title)' }}>Agenda de Atendimentos</h2>
-              <div className="btn-secondary" style={{ display: 'flex', gap: '0.5rem' }}>
-                <Filter size={16} /> Todos os Períodos
-              </div>
-            </div>
-            
+            <h2 style={{ marginBottom: '2rem', fontFamily: 'var(--font-title)' }}>Agenda de Atendimentos</h2>
             <div style={{ background: 'white', borderRadius: 16, border: '1px solid var(--border-subtle)', overflow: 'hidden' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                 <thead style={{ background: '#f8fafc', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
                   <tr>
                     <th style={{ padding: '1rem' }}>LEAD</th>
                     <th style={{ padding: '1rem' }}>DATA / HORA</th>
-                    <th style={{ padding: '1rem' }}>STATUS ATUAL</th>
+                    <th style={{ padding: '1rem' }}>STATUS</th>
                     <th style={{ padding: '1rem' }}>AÇÕES</th>
                   </tr>
                 </thead>
@@ -396,6 +419,11 @@ function App() {
                       </td>
                     </tr>
                   ))}
+                  {leads.filter(l => l.scheduled_at).length === 0 && (
+                    <tr>
+                      <td colSpan={4} style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>Nenhum atendimento agendado.</td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
@@ -405,36 +433,57 @@ function App() {
         {activeTab === 'users' && (
           <div style={{ padding: '2rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-              <h2 style={{ fontFamily: 'var(--font-title)' }}>Time e Usuários</h2>
-              <button className="btn-primary">
-                <UserPlus size={18} /> Novo Usuário
-              </button>
+              <h2 style={{ fontFamily: 'var(--font-title)' }}>Time e Colaboradores</h2>
+              <button className="btn-primary"><UserPlus size={18} /> Novo Usuário</button>
             </div>
-            
             <div className="metric-card" style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '1rem', padding: '1.5rem' }}>
-              <div className="logo-box" style={{ width: 60, height: 60, fontSize: '1.5rem' }}>W</div>
+              <div className="logo-box" style={{ width: 60, height: 60, fontSize: '1.5rem' }}>{session.user.email.charAt(0).toUpperCase()}</div>
               <div>
-                <div style={{ fontSize: '1.1rem', fontWeight: 700 }}>William Barbosa (Admin)</div>
+                <div style={{ fontSize: '1.1rem', fontWeight: 700 }}>Administrador</div>
                 <div style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>{session.user.email}</div>
                 <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
-                  <span className="count-badge" style={{ background: '#f0fdf4', color: '#16a34a' }}>Ativo agora</span>
-                  <span className="count-badge">Proprietário</span>
+                  <span className="count-badge" style={{ background: '#f0fdf4', color: '#16a34a' }}>Sessão Ativa</span>
                 </div>
               </div>
-            </div>
-            
-            <div style={{ marginTop: '2rem', padding: '2rem', border: '1px dashed var(--border-subtle)', borderRadius: 16, textAlign: 'center' }}>
-              <AlertCircle size={32} style={{ color: 'var(--text-light)', marginBottom: '1rem' }} />
-              <div style={{ fontWeight: 600 }}>Gestão de Time Avançada</div>
-              <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', maxWidth: '400px', margin: '0.5rem auto' }}>
-                Para adicionar mais vendedores e limitar o que cada um vê, você precisará configurar o módulo de Permissions no Supabase.
-              </p>
             </div>
           </div>
         )}
       </main>
 
-      {/* Details Modal */}
+      {/* Modals Section */}
+      {showNewLeadModal && (
+        <div className="modal-overlay" onClick={() => setShowNewLeadModal(false)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2 className="modal-title">Novo Lead Manual</h2>
+              <button className="modal-close" onClick={() => setShowNewLeadModal(false)}><X size={20} /></button>
+            </div>
+            <form onSubmit={handleCreateLead}>
+              <div className="modal-body">
+                <div className="form-group">
+                  <label><UserIcon size={14} /> Nome do Lead</label>
+                  <input type="text" value={newLeadData.name} onChange={e => setNewLeadData({...newLeadData, name: e.target.value})} placeholder="Ex: João Silva" required />
+                </div>
+                <div className="form-group">
+                  <label><Phone size={14} /> Telefone / WhatsApp</label>
+                  <input type="text" value={newLeadData.phone} onChange={e => setNewLeadData({...newLeadData, phone: e.target.value})} placeholder="Ex: 11999999999" required />
+                </div>
+                <div className="form-group">
+                  <label>Status Inicial</label>
+                  <select value={newLeadData.status} onChange={e => setNewLeadData({...newLeadData, status: e.target.value})}>
+                    {STATUSES.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button type="button" className="btn-secondary" onClick={() => setShowNewLeadModal(false)}>Cancelar</button>
+                <button type="submit" className="btn-primary" disabled={loading}>{loading ? 'Criando...' : 'Cadastrar Lead'}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {selectedLead && (
         <div className="modal-overlay" onClick={() => setSelectedLead(null)}>
           <div className="modal-content" onClick={e => e.stopPropagation()}>
@@ -443,73 +492,37 @@ function App() {
               <button className="modal-close" onClick={() => setSelectedLead(null)}><X size={20} /></button>
             </div>
             <div className="modal-body">
-              <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem' }}>
-                <div className="metric-card" style={{ flex: 1, textAlign: 'center' }}>
-                  <span className="metric-label">Status Atual</span>
-                  <div style={{ fontWeight: 700, color: STATUSES.find(s => s.id === selectedLead.status)?.color }}>
-                    {STATUSES.find(s => s.id === selectedLead.status)?.label}
-                  </div>
-                </div>
-                <div className="metric-card" style={{ flex: 1, textAlign: 'center' }}>
-                  <span className="metric-label">Agendamento</span>
-                  <div style={{ fontWeight: 700 }}>{selectedLead.scheduled_at ? formatDate(selectedLead.scheduled_at) : 'Nenhum'}</div>
-                </div>
-              </div>
-              <div className="form-group">
-                <label>Nome do Contato</label>
-                <div className="btn-secondary" style={{ padding: '0.75rem', cursor: 'default' }}>{selectedLead.name || 'Pendente'}</div>
-              </div>
-              <div className="form-group">
-                <label>Número do WhatsApp</label>
-                <div className="btn-secondary" style={{ padding: '0.75rem', cursor: 'default' }}>{selectedLead.phone}</div>
-              </div>
-              <div className="form-group">
-                <label>Histórico da Conversa (IA)</label>
-                <div style={{ maxHeight: '150px', overflowY: 'auto', padding: '1rem', background: '#f8fafc', borderRadius: 8, fontSize: '0.9rem', border: '1px solid #e2e8f0' }}>
-                  {selectedLead.last_message || 'Aguardando primeira interação...'}
-                </div>
-              </div>
+              <div className="form-group"><label>Nome</label><div className="btn-secondary" style={{ padding: '0.75rem' }}>{selectedLead.name || 'Pendente'}</div></div>
+              <div className="form-group"><label>WhatsApp</label><div className="btn-secondary" style={{ padding: '0.75rem' }}>{selectedLead.phone}</div></div>
+              <div className="form-group"><label>Última Mensagem</label><div style={{ padding: '1rem', background: '#f8fafc', borderRadius: 8, fontSize: '0.9rem', border: '1px solid #e2e8f0' }}>{selectedLead.last_message || 'Aguardando interação...'}</div></div>
             </div>
-            <div className="modal-footer">
-              <button className="btn-secondary" onClick={() => setSelectedLead(null)}>Fechar</button>
-              <button className="btn-primary" onClick={() => handleWhatsApp(selectedLead.phone, selectedLead.name)}>
-                <MessageCircle size={18} /> Chamar no WhatsApp
+            <div className="modal-footer" style={{ justifyContent: 'space-between' }}>
+              <button className="btn-secondary" style={{ color: '#ef4444', borderColor: '#fecaca' }} onClick={() => handleDeleteLead(selectedLead.id)}>
+                <Trash2 size={16} /> Excluir Lead
               </button>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <button className="btn-secondary" onClick={() => setSelectedLead(null)}>Fechar</button>
+                <button className="btn-primary" onClick={() => handleWhatsApp(selectedLead.phone, selectedLead.name)}><MessageCircle size={18} /> Chamar</button>
+              </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* Schedule Modal */}
       {schedulingLead && (
         <div className="modal-overlay" onClick={() => setSchedulingLead(null)}>
           <div className="modal-content" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
-              <h2 className="modal-title">Novo Agendamento</h2>
+              <h2 className="modal-title">Agendar Atendimento</h2>
               <button className="modal-close" onClick={() => setSchedulingLead(null)}><X size={20} /></button>
             </div>
-            <form onSubmit={e => {
-              e.preventDefault();
-              if (schedulingLead && scheduleDate) {
-                supabase.from('leads').update({ 
-                  scheduled_at: new Date(scheduleDate).toISOString(),
-                  updated_at: new Date().toISOString() 
-                }).eq('id', schedulingLead.id).then(() => {
-                  setSchedulingLead(null);
-                  setScheduleDate('');
-                  fetchLeads();
-                });
-              }
-            }}>
+            <form onSubmit={handleSchedule}>
               <div className="modal-body">
-                <div className="form-group">
-                  <label>Data e Hora do Atendimento</label>
-                  <input type="datetime-local" value={scheduleDate} onChange={e => setScheduleDate(e.target.value)} required />
-                </div>
+                <div className="form-group"><label>Data e Hora</label><input type="datetime-local" value={scheduleDate} onChange={e => setScheduleDate(e.target.value)} required /></div>
               </div>
               <div className="modal-footer">
                 <button type="button" className="btn-secondary" onClick={() => setSchedulingLead(null)}>Cancelar</button>
-                <button type="submit" className="btn-primary">Salvar na Agenda</button>
+                <button type="submit" className="btn-primary">Salvar Agenda</button>
               </div>
             </form>
           </div>

@@ -3,7 +3,7 @@ import {
   RefreshCcw, X, MessageCircle, Calendar, 
   Search, LayoutDashboard, Users, LogOut, 
   UserPlus, TrendingUp, CalendarDays,
-  Plus, Trash2, Phone, User as UserIcon
+  Plus, Trash2, Phone, User as UserIcon, Settings
 } from 'lucide-react';
 import { supabase } from './supabase';
 import './index.css';
@@ -243,8 +243,17 @@ function App() {
           <div className={`nav-item ${activeTab === 'appointments' ? 'active' : ''}`} onClick={() => setActiveTab('appointments')}>
             <CalendarDays size={18} /> Agendamentos
           </div>
-          <div className={`nav-item ${activeTab === 'users' ? 'active' : ''}`} onClick={() => setActiveTab('users')}>
+          <div 
+            className={`nav-item ${activeTab === 'users' ? 'active' : ''}`}
+            onClick={() => setActiveTab('users')}
+          >
             <Users size={18} /> Time / Usuários
+          </div>
+          <div 
+            className={`nav-item ${activeTab === 'settings' ? 'active' : ''}`}
+            onClick={() => setActiveTab('settings')}
+          >
+            <Settings size={18} /> Configurações
           </div>
         </nav>
 
@@ -441,6 +450,38 @@ function App() {
                 <div style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>{session.user.email}</div>
                 <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
                   <span className="count-badge" style={{ background: '#f0fdf4', color: '#16a34a' }}>Sessão Ativa</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+        {activeTab === 'settings' && (
+          <div style={{ padding: '2rem', overflowY: 'auto' }}>
+            <h2 style={{ marginBottom: '2rem', fontFamily: 'var(--font-title)' }}>Configurações do CRM</h2>
+            
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
+              <div className="metric-card" style={{ background: 'white' }}>
+                <h3 style={{ marginBottom: '1rem', fontSize: '1rem' }}>Preferências de Atendimento</h3>
+                <div className="form-group">
+                  <label>Mensagem Padrão (WhatsApp)</label>
+                  <textarea 
+                    style={{ width: '100%', padding: '0.75rem', borderRadius: 8, border: '1px solid var(--border-subtle)', height: '100px', fontFamily: 'inherit' }}
+                    defaultValue="Olá [Nome], tudo bem? Vi seu interesse e gostaria de conversar."
+                  />
+                  <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>Use [Nome] para personalizar automaticamente.</p>
+                </div>
+                <button className="btn-primary">Salvar Alterações</button>
+              </div>
+
+              <div className="metric-card" style={{ background: 'white' }}>
+                <h3 style={{ marginBottom: '1rem', fontSize: '1rem' }}>Conexão com Banco de Dados</h3>
+                <div style={{ padding: '1rem', background: '#f0fdf4', borderRadius: 8, border: '1px solid #bcf0da', color: '#166534', fontSize: '0.85rem' }}>
+                  <div style={{ fontWeight: 700, marginBottom: '0.25rem' }}>Status: Conectado</div>
+                  Supabase Database (leads table) is online.
+                </div>
+                <div style={{ marginTop: '1.5rem' }}>
+                  <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)' }}>DOMÍNIO DE ACESSO</label>
+                  <div style={{ fontSize: '0.9rem', color: 'var(--brand-secondary)', marginTop: '0.25rem' }}>ayuv-crm.vercel.app</div>
                 </div>
               </div>
             </div>

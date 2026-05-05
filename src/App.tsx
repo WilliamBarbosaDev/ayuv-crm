@@ -230,8 +230,7 @@ function App() {
     <div className="dashboard-container">
       <aside className="sidebar">
         <div className="logo-area">
-          <img src={logo} alt="Ayuv Logo" style={{ height: '32px', width: 'auto', objectFit: 'contain' }} />
-          <span className="logo-text">Ayuv CRM</span>
+          <img src={logo} alt="Ayuv Logo" style={{ height: '35px', width: 'auto', objectFit: 'contain' }} />
         </div>
         
         <nav className="nav-links">

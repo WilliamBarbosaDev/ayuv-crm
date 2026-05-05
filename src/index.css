@@ -292,6 +292,64 @@ header h1 {
   font-weight: 500;
 }
 
+/* Card Actions Integration */
+.card-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.85rem;
+}
+
+.action-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.5rem;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
+}
+
+.wa-btn {
+  background-color: #25d366;
+  color: white;
+  border-color: #128c7e;
+}
+
+.wa-btn:hover {
+  background-color: #128c7e;
+  box-shadow: 0 4px 12px rgba(37, 211, 102, 0.2);
+}
+
+.schedule-btn {
+  background-color: var(--wood-50);
+  color: var(--wood-700);
+  border-color: var(--border-color);
+}
+
+.schedule-btn:hover {
+  background-color: var(--wood-100);
+  border-color: var(--wood-300);
+}
+
+.card-schedule-tag {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.7rem;
+  color: #c2410c; /* focus orange */
+  background-color: #fff7ed;
+  padding: 0.4rem 0.6rem;
+  border-radius: 6px;
+  margin-bottom: 0.85rem;
+  border: 1px solid #ffedd5;
+  font-weight: 600;
+}
+
 /* Minimalist Empty State */
 .kanban-cards > div[style*="text-align: center"] {
   color: var(--wood-300) !important;

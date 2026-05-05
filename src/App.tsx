@@ -1,9 +1,8 @@
 import { useEffect, useState } from 'react';
-import { RefreshCcw, Leaf, X, Clock } from 'lucide-react';
+import { RefreshCcw, Leaf, X, Clock, MessageCircle, Calendar } from 'lucide-react';
 import { supabase } from './supabase';
 import './index.css';
-// v1.0.1 - Authentication and Logout fix
-
+// v1.1.0 - WhatsApp Integration and Scheduling
 
 interface Lead {
   id: string;
@@ -11,6 +10,7 @@ interface Lead {
   name: string;
   status: string;
   last_message: string;
+  scheduled_at?: string;
   created_at: string;
   updated_at: string;
 }
@@ -34,6 +34,8 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [draggedLeadId, setDraggedLeadId] = useState<string | null>(null);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+  const [schedulingLead, setSchedulingLead] = useState<Lead | null>(null);
+  const [scheduleDate, setScheduleDate] = useState('');
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -146,6 +148,37 @@ function App() {
     setDraggedLeadId(null);
   };
 
+  const handleWhatsApp = (phone: string, name: string) => {
+    // Limpa o número de telefone (remove caracteres não numéricos)
+    const cleanPhone = phone.replace(/\D/g, '');
+    const message = encodeURIComponent(`Olá ${name}, tudo bem?`);
+    window.open(`https://wa.me/${cleanPhone}?text=${message}`, '_blank');
+  };
+
+  const handleSchedule = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!schedulingLead || !scheduleDate) return;
+
+    try {
+      const { error } = await supabase
+        .from('leads')
+        .update({ 
+          scheduled_at: new Date(scheduleDate).toISOString(),
+          updated_at: new Date().toISOString() 
+        })
+        .eq('id', schedulingLead.id);
+
+      if (error) throw error;
+      
+      setSchedulingLead(null);
+      setScheduleDate('');
+      fetchLeads();
+    } catch (err) {
+      console.error(err);
+      alert("Erro ao agendar atendimento.");
+    }
+  };
+
   const formatDate = (dateString: string) => {
     const d = new Date(dateString);
     return new Intl.DateTimeFormat('pt-BR', { 
@@ -253,8 +286,38 @@ function App() {
                     <div className="card-message">
                       {lead.last_message || 'Nenhuma mensagem.'}
                     </div>
+                    
+                    {lead.scheduled_at && (
+                      <div className="card-schedule-tag">
+                        <Calendar size={12} /> 
+                        Agendado: {new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }).format(new Date(lead.scheduled_at))}
+                      </div>
+                    )}
+
+                    <div className="card-actions" onClick={e => e.stopPropagation()}>
+                      <button 
+                        className="action-btn wa-btn" 
+                        title="Enviar WhatsApp"
+                        onClick={() => handleWhatsApp(lead.phone, lead.name)}
+                      >
+                        <MessageCircle size={16} />
+                        WhatsApp
+                      </button>
+                      <button 
+                        className="action-btn schedule-btn" 
+                        title="Agendar Atendimento"
+                        onClick={() => {
+                          setSchedulingLead(lead);
+                          setScheduleDate(lead.scheduled_at ? lead.scheduled_at.slice(0, 16) : '');
+                        }}
+                      >
+                        <Calendar size={16} />
+                        Agendar
+                      </button>
+                    </div>
+
                     <div className="card-footer">
-                      <Clock size={12} /> Modificado em {formatDate(lead.updated_at)}
+                      <Clock size={12} /> Modificado {formatDate(lead.updated_at)}
                     </div>
                   </div>
                 ))}
@@ -299,6 +362,42 @@ function App() {
             <div className="modal-footer">
               <button className="btn" onClick={() => setSelectedLead(null)}>Fechar</button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {schedulingLead && (
+        <div className="modal-overlay" onClick={() => setSchedulingLead(null)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Agendar Atendimento</h2>
+              <button className="modal-close" onClick={() => setSchedulingLead(null)}>
+                <X size={20} />
+              </button>
+            </div>
+            <form onSubmit={handleSchedule}>
+              <div className="modal-body">
+                <p style={{ marginBottom: '1.5rem', fontSize: '0.9rem', color: 'var(--text-muted)' }}>
+                  Selecione a data e hora para o atendimento com <strong>{schedulingLead.name || schedulingLead.phone}</strong>.
+                </p>
+                <div className="form-group">
+                  <label>Data e Hora</label>
+                  <input 
+                    type="datetime-local" 
+                    value={scheduleDate}
+                    onChange={(e) => setScheduleDate(e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
+              <div className="modal-footer" style={{ gap: '1rem' }}>
+                <button type="button" className="btn btn-outline" onClick={() => setSchedulingLead(null)}>Cancelar</button>
+                <button type="submit" className="btn">
+                  <Calendar size={18} />
+                  Confirmar Agendamento
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

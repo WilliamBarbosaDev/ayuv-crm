@@ -204,8 +204,8 @@ function App() {
     return (
       <div className="login-wrap">
         <div className="login-box">
-          <div style={{ margin: '0 auto 1.5rem auto', display: 'flex', justifyContent: 'center' }}>
-            <img src={logo} alt="Ayuv Logo" style={{ height: '60px', width: 'auto', objectFit: 'contain' }} />
+          <div style={{ margin: '0 auto 1rem auto', display: 'flex', justifyContent: 'center' }}>
+            <img src={logo} alt="Ayuv Logo" style={{ height: '100px', width: 'auto', objectFit: 'contain' }} />
           </div>
           <h2>Ayuv CRM v1.3</h2>
           <p>Gestão Inteligente de Atendimentos</p>
@@ -229,8 +229,8 @@ function App() {
   return (
     <div className="dashboard-container">
       <aside className="sidebar">
-        <div className="logo-area">
-          <img src={logo} alt="Ayuv Logo" style={{ height: '35px', width: 'auto', objectFit: 'contain' }} />
+        <div className="logo-area" style={{ marginBottom: '2rem' }}>
+          <img src={logo} alt="Ayuv Logo" style={{ height: '50px', width: 'auto', objectFit: 'contain' }} />
         </div>
         
         <nav className="nav-links">

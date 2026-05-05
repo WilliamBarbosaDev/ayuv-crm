@@ -1,14 +1,15 @@
 import { useEffect, useState } from 'react';
 import { 
-  RefreshCcw, Leaf, X, MessageCircle, Calendar, 
+  RefreshCcw, X, MessageCircle, Calendar, 
   Search, LayoutDashboard, Users, LogOut, 
   UserPlus, TrendingUp, CalendarDays,
   Plus, Trash2, Phone, User as UserIcon
 } from 'lucide-react';
 import { supabase } from './supabase';
 import './index.css';
+import logo from './assets/logo.png';
 
-// v1.3.1 - Fully Functional Features (Manual Creation, Search, Real-time Dashboard)
+// v1.3.2 - Official Branding (Logo Integration)
 interface Lead {
   id: string;
   phone: string;
@@ -203,8 +204,8 @@ function App() {
     return (
       <div className="login-wrap">
         <div className="login-box">
-          <div className="logo-box" style={{ margin: '0 auto 1.5rem auto' }}>
-            <Leaf size={24} />
+          <div style={{ margin: '0 auto 1.5rem auto', display: 'flex', justifyContent: 'center' }}>
+            <img src={logo} alt="Ayuv Logo" style={{ height: '60px', width: 'auto', objectFit: 'contain' }} />
           </div>
           <h2>Ayuv CRM v1.3</h2>
           <p>Gestão Inteligente de Atendimentos</p>
@@ -229,9 +230,7 @@ function App() {
     <div className="dashboard-container">
       <aside className="sidebar">
         <div className="logo-area">
-          <div className="logo-box">
-            <Leaf size={20} />
-          </div>
+          <img src={logo} alt="Ayuv Logo" style={{ height: '32px', width: 'auto', objectFit: 'contain' }} />
           <span className="logo-text">Ayuv CRM</span>
         </div>
         
